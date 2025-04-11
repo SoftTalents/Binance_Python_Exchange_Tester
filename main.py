@@ -110,10 +110,16 @@ def ask_continue():
         else:
             print("Please enter 'y' or 'n'")
 
-def perform_operation(exchange_handler):
+def perform_operation():
     """Perform a single operation (buy, sell, check balance, check price)"""
     try:
-        # Step 1: Select action
+        # Step 1: Select exchange
+        exchange_id = select_exchange()
+        
+        # Step 2: Initialize exchange handler
+        exchange_handler = ExchangeHandler(exchange_id, sandbox=False)
+        
+        # Step 3: Select action
         action = select_action()
         
         if action in ['buy', 'sell', 'price']:
@@ -234,16 +240,10 @@ def main():
     print("==================================")
     
     try:
-        # Step 1: Select exchange (only done once)
-        exchange_id = select_exchange()
-        
-        # Step 2: Initialize exchange handler
-        exchange_handler = ExchangeHandler(exchange_id, sandbox=False)
-        
         # Main program loop
         while True:
-            # Perform one operation
-            perform_operation(exchange_handler)
+            # Perform one operation (includes exchange selection)
+            perform_operation()
             
             # Ask if user wants to continue
             if not ask_continue():
