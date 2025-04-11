@@ -99,26 +99,25 @@ def get_percentage():
         except ValueError:
             print("Please enter a valid number.")
 
-def main():
-    # Setup logging
-    setup_logging()
-    
-    print("\n==================================")
-    print("=== Cryptocurrency Exchange Tester ===")
-    print("==================================")
-    
+def ask_continue():
+    """Ask if user wants to continue with another operation"""
+    while True:
+        choice = input("\nDo you want to continue with another operation? (y/n): ").strip().lower()
+        if choice in ['y', 'yes']:
+            return True
+        elif choice in ['n', 'no']:
+            return False
+        else:
+            print("Please enter 'y' or 'n'")
+
+def perform_operation(exchange_handler):
+    """Perform a single operation (buy, sell, check balance, check price)"""
     try:
-        # Step 1: Select exchange
-        exchange_id = select_exchange()
-        
-        # Step 2: Initialize exchange handler
-        exchange_handler = ExchangeHandler(exchange_id, sandbox=False)
-        
-        # Step 3: Select action
+        # Step 1: Select action
         action = select_action()
         
         if action in ['buy', 'sell', 'price']:
-            # Step 4: Get token symbol
+            # Step 2: Get token symbol
             base_symbol = get_token_symbol()
             
             # Format symbol with USDT
@@ -127,13 +126,13 @@ def main():
             # Check if symbol exists
             exists, formatted_symbol = exchange_handler.check_pair_exists(symbol)
             if not exists:
-                print(f"Trading pair {symbol} not found on {exchange_id.upper()}. Please check the symbol and try again.")
+                print(f"Trading pair {symbol} not found on {exchange_handler.exchange_id.upper()}. Please check the symbol and try again.")
                 return
             
             symbol = formatted_symbol
             
             if action == 'buy':
-                # Step 5a: For buy, get amount in USDT
+                # Step 3a: For buy, get amount in USDT
                 amount = get_amount('buy', config.QUOTE_CURRENCY)
                 
                 # Execute buy
@@ -150,7 +149,7 @@ def main():
                     print("\nBuy operation failed. Check the logs for details.")
             
             elif action == 'sell':
-                # Step 5b: For sell, get amount in base currency or percentage
+                # Step 3b: For sell, get amount in base currency or percentage
                 base_currency = symbol.split('/')[0]  # e.g., BTC in BTC/USDT
                 
                 # Get current balance first
@@ -221,6 +220,34 @@ def main():
                         print(f"{currency}: {amounts['free']} (Total: {amounts['total']})")
             else:
                 print("\nNo balances found or error retrieving balances.")
+    
+    except Exception as e:
+        logger.error(f"Error during operation: {e}")
+        print(f"\nAn error occurred: {e}")
+
+def main():
+    # Setup logging
+    setup_logging()
+    
+    print("\n==================================")
+    print("=== Cryptocurrency Exchange Tester ===")
+    print("==================================")
+    
+    try:
+        # Step 1: Select exchange (only done once)
+        exchange_id = select_exchange()
+        
+        # Step 2: Initialize exchange handler
+        exchange_handler = ExchangeHandler(exchange_id, sandbox=False)
+        
+        # Main program loop
+        while True:
+            # Perform one operation
+            perform_operation(exchange_handler)
+            
+            # Ask if user wants to continue
+            if not ask_continue():
+                break
     
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")
