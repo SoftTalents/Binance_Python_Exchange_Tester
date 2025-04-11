@@ -198,8 +198,28 @@ class ExchangeHandler:
             if 'precision' in market and 'amount' in market['precision']:
                 base_amount = self.exchange.amount_to_precision(symbol, base_amount)
             
-            # Place order
-            order = self.exchange.create_market_buy_order(symbol, float(base_amount))
+            # Place order - handle special cases for exchanges like HTX that require price for market buy
+            order = None
+            
+            if self.exchange_id == 'htx':
+                # For HTX, pass createMarketBuyOrderRequiresPrice=False and use amount as cost
+                order = self.exchange.create_market_buy_order(
+                    symbol, 
+                    amount,  # For HTX, pass the cost (USDT amount) directly
+                    params={'createMarketBuyOrderRequiresPrice': False}
+                )
+            elif hasattr(self.exchange, 'options') and self.exchange.options.get('createMarketBuyOrderRequiresPrice', False):
+                # For other exchanges that might require price parameter
+                # Use the current price and calculate the base amount
+                order = self.exchange.create_market_buy_order(
+                    symbol,
+                    float(base_amount),
+                    params={'createMarketBuyOrderRequiresPrice': False, 'cost': amount}
+                )
+            else:
+                # Standard market buy order
+                order = self.exchange.create_market_buy_order(symbol, float(base_amount))
+                
             logger.info(f"Buy order placed and executed: {order['id']}")
             
             # Get filled details
