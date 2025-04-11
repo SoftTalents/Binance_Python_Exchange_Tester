@@ -50,6 +50,6 @@ The program will guide you through the following steps:
 
 ## Notes
 
-- All operations use sandbox/testnet mode by default for safety
+- All operations use live trading mode by default (be careful with API keys that have trading permissions)
 - The program only supports USDT trading pairs
 - Logs are saved in the `logs` directory

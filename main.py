@@ -112,7 +112,7 @@ def main():
         exchange_id = select_exchange()
         
         # Step 2: Initialize exchange handler
-        exchange_handler = ExchangeHandler(exchange_id, sandbox=True)
+        exchange_handler = ExchangeHandler(exchange_id, sandbox=False)
         
         # Step 3: Select action
         action = select_action()

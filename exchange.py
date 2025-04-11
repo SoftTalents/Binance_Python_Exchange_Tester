@@ -3,7 +3,7 @@ from loguru import logger
 import config
 
 class ExchangeHandler:
-    def __init__(self, exchange_id, sandbox=True):
+    def __init__(self, exchange_id, sandbox=False):
         """Initialize exchange connection with API keys from config"""
         
         # Validate exchange is supported
@@ -74,10 +74,12 @@ class ExchangeHandler:
         self.exchange = exchange_class(exchange_options)
         self.exchange_id = exchange_id
         
-        # Use sandbox/testnet if available and requested
+        # Use sandbox/testnet if specifically requested
         if sandbox and hasattr(self.exchange, 'set_sandbox_mode'):
             self.exchange.set_sandbox_mode(True)
             logger.info(f"Using {exchange_id} sandbox/testnet mode")
+        else:
+            logger.info(f"Using {exchange_id} live trading mode")
         
         # Load markets
         logger.info(f"Connecting to {exchange_id}...")
