@@ -11,6 +11,7 @@ MEXC_API_SECRET = os.getenv('MEXC_API_SECRET', '')
 KUCOIN_API_KEY = os.getenv('KUCOIN_API_KEY', '')
 KUCOIN_API_SECRET = os.getenv('KUCOIN_API_SECRET', '')
 KUCOIN_API_PASSPHRASE = os.getenv('KUCOIN_API_PASSPHRASE', '')
+KUCOIN_API_PASSWORD = os.getenv('KUCOIN_API_PASSWORD', '')  # For KuCoin's 2FA
 
 HTX_API_KEY = os.getenv('HTX_API_KEY', '')
 HTX_API_SECRET = os.getenv('HTX_API_SECRET', '')

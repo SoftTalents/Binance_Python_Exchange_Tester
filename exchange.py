@@ -51,7 +51,7 @@ class ExchangeHandler:
             exchange_options.update({
                 'apiKey': config.BITMART_API_KEY,
                 'secret': config.BITMART_API_SECRET,
-                'password': config.BITMART_MEMO
+                'uid': config.BITMART_MEMO
             })
             exchange_class = ccxt.bitmart
             
