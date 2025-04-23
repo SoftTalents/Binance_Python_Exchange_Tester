@@ -367,8 +367,8 @@ class ExchangeHandler:
                     try:
                         params = {'network': network_param}
                         # For HTX and Bitget, use 'chain' parameter instead of 'network'
-                        if self.exchange_id in ['htx', 'bitget']:
-                            params = {'chain': network_param}
+                        if self.exchange_id in ['bitget']:
+                            params = {'chain': network_param, 'coin': currency}
                             
                         # For specific exchanges, handle variations in the API
                         if self.exchange_id == 'kucoin':
