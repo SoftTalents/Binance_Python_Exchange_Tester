@@ -338,12 +338,14 @@ class ExchangeHandler:
             
             # Exchange-specific network parameter handling
             if self.exchange_id == 'kucoin':
-                network_param = 'BEP20 (BSC)'
+                network_param = 'BSC' # KuCoin uses 'BSC' rather than 'BEP20 (BSC)'
             elif self.exchange_id in ['gateio', 'bitmart', 'mexc']:
                 network_param = 'BSC'
             elif self.exchange_id == 'bybit':
                 network_param = 'BSC (BEP20)'
-            elif self.exchange_id in ['htx', 'bitget']:
+            elif self.exchange_id == 'htx':
+                network_param = 'BSC' # HTX uses uppercase 'BSC'
+            elif self.exchange_id == 'bitget':
                 network_param = 'bsc'
             
             # Try to fetch existing address
@@ -446,14 +448,14 @@ class ExchangeHandler:
                 params = {'network': network_param}
                 
             elif self.exchange_id == 'kucoin':
-                network_param = 'BEP20 (BSC)'
+                network_param = 'BSC'
                 params = {
                     'network': network_param,
                     'type': 'trade'  # Specify withdrawal from Trading Account
                 }
                 
             elif self.exchange_id == 'htx':
-                network_param = 'bsc'
+                network_param = 'BSC'
                 params = {'chain': network_param}
                 
             elif self.exchange_id == 'gateio':
