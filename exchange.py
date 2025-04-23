@@ -334,9 +334,9 @@ class ExchangeHandler:
             logger.info(f"Getting BEP20 deposit address for USDT on {self.exchange_id}")
             
             # Exchange-specific network parameter handling
-            if self.exchange_id in ['mexc', 'bitget', 'kucoin']:
+            if self.exchange_id in ['mexc', 'kucoin']:
                 network_param = 'BSC'
-            elif self.exchange_id in ['gateio', 'htx', 'bybit', 'bitmart']:
+            elif self.exchange_id in ['gateio', 'htx', 'bybit', 'bitget', 'bitmart']:
                 network_param = 'BEP20' # HTX uses uppercase 'BSC'
 
             # Try to fetch existing address
@@ -344,7 +344,7 @@ class ExchangeHandler:
                 params = {'network': network_param}
                 # For HTX and Bitget, use 'chain' parameter instead of 'network'
                 if self.exchange_id in ['bitget']:
-                    params = {'chain': network_param}
+                    params = {'chain': network_param, 'coin': currency}
                 
                 # For specific exchanges, handle variations in the API
                 if self.exchange_id == 'kucoin':
