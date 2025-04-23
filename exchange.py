@@ -339,19 +339,16 @@ class ExchangeHandler:
             # Exchange-specific network parameter handling
             if self.exchange_id == 'kucoin':
                 network_param = 'BSC' # KuCoin uses 'BSC' rather than 'BEP20 (BSC)'
-            elif self.exchange_id in ['bitmart', 'mexc', 'bitget']:
+            elif self.exchange_id in ['mexc', 'bitget']:
                 network_param = 'BSC'
-            elif self.exchange_id in ['gateio', 'htx', 'bybit']:
+            elif self.exchange_id in ['gateio', 'htx', 'bybit', 'bitmart']:
                 network_param = 'BEP20' # HTX uses uppercase 'BSC'
 
-            if self.exchange_id == 'bitmart':
-                currency = 'USDT-BSC'
-            
             # Try to fetch existing address
             try:
                 params = {'network': network_param}
                 # For HTX and Bitget, use 'chain' parameter instead of 'network'
-                if self.exchange_id in ['bitget', 'bitmart']:
+                if self.exchange_id in ['bitget']:
                     params = {'chain': network_param}
                 
                 # For specific exchanges, handle variations in the API
