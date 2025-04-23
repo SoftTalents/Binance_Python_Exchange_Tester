@@ -1,6 +1,6 @@
-# Python Exchange Tester
+# Cryptocurrency Exchange Tester
 
-A simple interactive cryptocurrency exchange trading tool that allows you to test buying and selling tokens on various exchanges using USDT pairs.
+A command-line tool for interacting with various cryptocurrency exchanges, supporting market operations, balance checking, deposits, and withdrawals.
 
 ## Supported Exchanges
 
@@ -14,42 +14,65 @@ A simple interactive cryptocurrency exchange trading tool that allows you to tes
 
 ## Features
 
-- Buy tokens with USDT
-- Sell tokens for USDT (specific amount or percentage of holdings)
+- Buy/sell tokens with market orders
 - Check account balances
 - Check token prices
-- Interactive step-by-step process for all operations
+- Get deposit addresses
+- Withdraw funds
+- Check deposit/withdrawal history
+- **NEW**: Deposit USDT directly from your wallet to exchanges
 
-## Setup
+## Installation
 
-1. Install the required packages:
+1. Clone the repository
+2. Install dependencies:
    ```
    pip install -r requirements.txt
    ```
-
-2. Create a `.env` file with your API keys (copy from `.env.example`):
-   ```
-   cp .env.example .env
-   ```
-
-3. Edit the `.env` file to add your API keys for the exchanges you want to use.
+3. Copy `.env.example` to `.env` and fill in your API keys for the exchanges you want to use
 
 ## Usage
 
-Run the program:
+Run the tool with:
+
 ```
 python main.py
 ```
 
-The program will guide you through the following steps:
+Follow the interactive prompts to:
+1. Select an exchange
+2. Choose an action
+3. Provide necessary details for the selected action
 
-1. Select an exchange to use
-2. Choose an action (buy, sell, check balance, or check price)
-3. Enter a token symbol (if needed)
-4. Specify amount to buy/sell (if needed)
+## Deposit Functionality
 
-## Notes
+The tool now supports direct deposits of BEP20 USDT from your wallet to your exchange account:
 
-- All operations use live trading mode by default (be careful with API keys that have trading permissions)
-- The program only supports USDT trading pairs
-- Logs are saved in the `logs` directory
+1. Set up your wallet details in the `.env` file:
+   ```
+   WALLET_PRIVATE_KEY=0x1234...  # Your wallet's private key
+   DEPOSIT_AMOUNT=10.5           # Amount to deposit in USDT
+   ```
+2. Select "Deposit USDT to exchange" from the actions menu
+3. The tool will fetch your deposit address from the selected exchange
+4. Review the deposit details (using private key and amount from .env file)
+5. Confirm the transaction
+
+**Important Notes for Direct Deposits:**
+- Only BEP20 USDT is supported for direct deposits
+- You need BNB in your wallet for gas fees (at least 0.005 BNB recommended)
+- Private keys are sensitive information - use this feature in a secure environment
+- Always double-check the deposit address and amount before confirming
+
+## Security Considerations
+
+- API keys should have withdrawal permissions only if you plan to use the withdrawal feature
+- Your private key is stored in the `.env` file - make sure this file is secured properly:
+  - Keep the `.env` file out of version control
+  - Set appropriate file permissions (readable only by you)
+  - Consider storing a limited amount in the wallet used for testing
+- Consider using a dedicated wallet with limited funds for testing
+
+## License
+
+MIT

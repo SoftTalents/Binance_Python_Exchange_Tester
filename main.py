@@ -4,6 +4,7 @@ from loguru import logger
 
 import config
 from exchange import ExchangeHandler
+from blockchain import BlockchainHandler
 
 def setup_logging():
     """Configure logging settings"""
@@ -45,9 +46,10 @@ def select_action():
     print("6. Withdraw funds")
     print("7. Check deposit history")
     print("8. Check withdrawal history")
+    print("9. Deposit USDT to exchange")
     
     while True:
-        choice = input("\nSelect action (1-8): ")
+        choice = input("\nSelect action (1-9): ")
         if choice == '1':
             return 'buy'
         elif choice == '2':
@@ -64,6 +66,8 @@ def select_action():
             return 'deposit_history'
         elif choice == '8':
             return 'withdrawal_history'
+        elif choice == '9':
+            return 'deposit_crypto'
         else:
             print("Invalid selection. Please try again.")
 
@@ -379,6 +383,109 @@ def perform_operation():
                 print(f"\nNo recent {currency} withdrawals found.")
             else:
                 print(f"\nFailed to fetch withdrawal history. Check the logs for details.")
+                
+        elif action == 'deposit_crypto':
+            # Initialize blockchain handler
+            blockchain_handler = BlockchainHandler()
+            
+            if not blockchain_handler.connected:
+                print("\nFailed to connect to Binance Smart Chain. Check your internet connection.")
+                return
+                
+            # Get deposit address from exchange
+            currency = 'USDT'
+            network = 'BEP20'
+            
+            print(f"\nGetting BEP20 deposit address for USDT...")
+            address_info = exchange_handler.get_deposit_address(currency, network)
+            
+            if not address_info or 'address' not in address_info:
+                print(f"\nFailed to get deposit address. Check the logs for details.")
+                return
+                
+            deposit_address = address_info['address']
+            
+            # Display tag/memo if available
+            tag = None
+            if 'tag' in address_info and address_info['tag']:
+                tag = address_info['tag']
+                print(f"\nDeposit address has a tag/memo: {tag}")
+                print("Both address AND tag are required for this deposit!")
+            
+            # Display deposit address
+            print("\n=== Deposit Information ===")
+            print(f"Exchange: {exchange_handler.exchange_id.upper()}")
+            print(f"Currency: {currency}")
+            print(f"Network: {network}")
+            print(f"Address: {deposit_address}")
+            if tag:
+                print(f"Tag/Memo: {tag}")
+            
+            # Get private key from config
+            private_key = config.WALLET_PRIVATE_KEY
+            
+            if not private_key:
+                print("\nNo wallet private key found in .env file.")
+                print("Please add your WALLET_PRIVATE_KEY to the .env file and try again.")
+                return
+            
+            # Validate private key
+            is_valid, sender_address = blockchain_handler.validate_private_key(private_key)
+            
+            if not is_valid:
+                print("\nInvalid private key format in .env file. Please check and try again.")
+                return
+                
+            print(f"\nWallet address: {sender_address}")
+            
+            # Get USDT balance
+            usdt_balance = blockchain_handler.get_usdt_balance(sender_address)
+            
+            if usdt_balance <= 0:
+                print(f"\nNo USDT balance found in wallet {sender_address}")
+                return
+                
+            print(f"Available USDT balance: {usdt_balance}")
+            
+            # Get amount from config
+            amount = config.DEPOSIT_AMOUNT
+            
+            if amount <= 0:
+                print("\nInvalid deposit amount in .env file. Amount must be greater than zero.")
+                return
+            
+            if amount > usdt_balance:
+                print(f"\nDeposit amount in .env file ({amount} USDT) exceeds available balance ({usdt_balance} USDT).")
+                return
+            
+            # Confirm deposit
+            print(f"\n=== Deposit Confirmation ===")
+            print(f"You are about to deposit {amount} USDT to {exchange_handler.exchange_id.upper()}")
+            print(f"From wallet: {sender_address}")
+            print(f"To address: {deposit_address}")
+            if tag:
+                print(f"With tag/memo: {tag}")
+            
+            confirm = input("\nConfirm deposit? (y/n): ").strip().lower()
+            
+            if confirm not in ['y', 'yes']:
+                print("Deposit cancelled.")
+                return
+            
+            # Execute deposit
+            print(f"\nInitiating deposit of {amount} USDT to {exchange_handler.exchange_id.upper()}...")
+            
+            tx_hash = blockchain_handler.transfer_usdt(private_key, deposit_address, amount)
+            
+            if tx_hash:
+                print("\n=== Deposit Initiated Successfully ===")
+                print(f"Transaction hash: {tx_hash}")
+                print(f"Amount: {amount} USDT")
+                print("\nIMPORTANT: It may take some time for the deposit to be credited to your exchange account.")
+                print(f"You can check the transaction status at https://bscscan.com/tx/{tx_hash}")
+                print("You can also check your deposit history on the exchange once it's processed.")
+            else:
+                print("\nDeposit failed. Check the logs for details.")
     
     except Exception as e:
         logger.error(f"Error during operation: {e}")
