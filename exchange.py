@@ -313,3 +313,300 @@ class ExchangeHandler:
         except Exception as e:
             logger.error(f"Error selling token: {e}")
             return None
+    
+    def get_deposit_address(self, currency='USDT', network='BEP20', create_if_needed=True):
+        """
+        Get deposit address for a currency with specified network
+        
+        Args:
+            currency: Currency code (default: USDT)
+            network: Network/chain to use (default: BEP20)
+            create_if_needed: Create a new address if none exists
+            
+        Returns:
+            Dictionary with address info or None if failed
+        """
+        try:
+            currency = currency.upper()
+            logger.info(f"Getting {network} deposit address for {currency} on {self.exchange_id}")
+            
+            # Normalize network parameter for different exchanges
+            network_param = network
+            
+            # Exchange-specific network parameter handling
+            if network.upper() == 'BEP20':
+                if self.exchange_id == 'kucoin':
+                    network_param = 'BEP20 (BSC)'
+                elif self.exchange_id == 'gateio':
+                    network_param = 'BSC'
+                elif self.exchange_id == 'bitmart':
+                    network_param = 'BSC'
+                elif self.exchange_id == 'bybit':
+                    network_param = 'BSC (BEP20)'
+                elif self.exchange_id == 'htx':
+                    network_param = 'bsc'
+                elif self.exchange_id == 'mexc':
+                    network_param = 'BSC'
+                elif self.exchange_id == 'bitget':
+                    network_param = 'bsc'
+            
+            # Try to fetch existing address
+            try:
+                params = {'network': network_param}
+                # For HTX and Bitget, use 'chain' parameter instead of 'network'
+                if self.exchange_id in ['htx', 'bitget']:
+                    params = {'chain': network_param}
+                
+                # For specific exchanges, handle variations in the API
+                if self.exchange_id == 'kucoin':
+                    # KuCoin needs to specify the account type for Trading Account
+                    params['type'] = 'trade'
+                elif self.exchange_id == 'bybit':
+                    # Bybit uses accountType parameter for Unified Trading Account
+                    params['accountType'] = 'UNIFIED'
+                
+                address_info = self.exchange.fetch_deposit_address(currency, params)
+                if address_info and 'address' in address_info and address_info['address']:
+                    logger.info(f"Found existing {network} deposit address for {currency}")
+                    return address_info
+            except Exception as e:
+                logger.warning(f"No existing deposit address found: {e}")
+                
+            # Create address if requested and supported
+            if create_if_needed:
+                if hasattr(self.exchange, 'has') and self.exchange.has.get('createDepositAddress'):
+                    try:
+                        params = {'network': network_param}
+                        # For HTX and Bitget, use 'chain' parameter instead of 'network'
+                        if self.exchange_id in ['htx', 'bitget']:
+                            params = {'chain': network_param}
+                            
+                        # For specific exchanges, handle variations in the API
+                        if self.exchange_id == 'kucoin':
+                            # KuCoin needs to specify the account type for Trading Account
+                            params['type'] = 'trade'
+                        elif self.exchange_id == 'bybit':
+                            # Bybit uses accountType parameter for Unified Trading Account
+                            params['accountType'] = 'UNIFIED'
+                            
+                        logger.info(f"Creating new {network} deposit address for {currency}")
+                        address_info = self.exchange.create_deposit_address(currency, params)
+                        return address_info
+                    except Exception as e:
+                        logger.error(f"Error creating deposit address: {e}")
+                else:
+                    logger.warning(f"{self.exchange_id} does not support creating deposit addresses via API")
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting deposit address: {e}")
+            return None
+    
+    def withdraw(self, currency='USDT', amount=0, address='', tag=None, network='BEP20'):
+        """
+        Withdraw funds to an external address
+        
+        Args:
+            currency: Currency code (default: USDT)
+            amount: Amount to withdraw
+            address: Destination address
+            tag: Tag/memo for the transaction (if needed)
+            network: Network/chain to use (default: BEP20)
+            
+        Returns:
+            Dictionary with withdrawal info or None if failed
+        """
+        try:
+            currency = currency.upper()
+            
+            # Validate amount
+            if amount <= 0:
+                logger.error(f"Invalid withdrawal amount: {amount}")
+                return None
+                
+            # Validate address
+            if not address:
+                logger.error("Withdrawal address cannot be empty")
+                return None
+                
+            # Check available balance
+            free_balance, _ = self.get_balance(currency)
+            if free_balance < amount:
+                logger.error(f"Insufficient balance: {free_balance} {currency}, need {amount}")
+                return None
+                
+            logger.info(f"Withdrawing {amount} {currency} to {address} via {network}")
+            
+            # Exchange-specific network parameter handling
+            network_param = network
+            params = {}
+            
+            # Configure withdrawal parameters based on exchange
+            if self.exchange_id == 'mexc':
+                if network.upper() == 'BEP20':
+                    network_param = 'BSC'
+                params = {'network': network_param}
+                
+            elif self.exchange_id == 'kucoin':
+                if network.upper() == 'BEP20':
+                    network_param = 'BEP20 (BSC)'
+                params = {
+                    'network': network_param,
+                    'type': 'trade'  # Specify withdrawal from Trading Account
+                }
+                
+            elif self.exchange_id == 'htx':
+                if network.upper() == 'BEP20':
+                    network_param = 'bsc'
+                params = {'chain': network_param}
+                
+            elif self.exchange_id == 'gateio':
+                if network.upper() == 'BEP20':
+                    network_param = 'BSC'
+                params = {'network': network_param}
+                
+            elif self.exchange_id == 'bitmart':
+                if network.upper() == 'BEP20':
+                    network_param = 'BSC'
+                params = {'network': network_param}
+                
+            elif self.exchange_id == 'bitget':
+                if network.upper() == 'BEP20':
+                    network_param = 'bsc'
+                params = {'chain': network_param, 'networkName': network_param}
+                
+            elif self.exchange_id == 'bybit':
+                if network.upper() == 'BEP20':
+                    network_param = 'BSC (BEP20)'
+                params = {
+                    'network': network_param,
+                    'accountType': 'UNIFIED'  # Specify withdrawal from Unified Trading Account
+                }
+            
+            # Execute withdrawal
+            withdrawal = self.exchange.withdraw(currency, amount, address, tag, params)
+            logger.info(f"Withdrawal initiated: {withdrawal}")
+            
+            return withdrawal
+            
+        except Exception as e:
+            logger.error(f"Error withdrawing funds: {e}")
+            return None
+    
+    def fetch_deposits(self, currency='USDT', limit=20):
+        """
+        Fetch recent deposits for a currency
+        
+        Args:
+            currency: Currency code (default: USDT)
+            limit: Maximum number of deposits to fetch
+            
+        Returns:
+            List of deposit transactions or None if failed
+        """
+        try:
+            currency = currency.upper()
+            logger.info(f"Fetching recent {currency} deposits")
+            
+            # Check if exchange supports deposit fetching
+            if not hasattr(self.exchange, 'has') or not self.exchange.has.get('fetchDeposits'):
+                logger.warning(f"{self.exchange_id} does not support fetching deposits via API")
+                return None
+            
+            # Fetch deposits
+            params = {}
+            
+            # Exchange-specific parameters
+            if self.exchange_id == 'kucoin':
+                params['type'] = 'trade'  # Specify Trading Account
+            elif self.exchange_id == 'bybit':
+                params['accountType'] = 'UNIFIED'  # Specify Unified Trading Account
+            
+            deposits = self.exchange.fetch_deposits(currency, None, limit, params)
+            
+            if deposits:
+                logger.info(f"Found {len(deposits)} deposits for {currency}")
+                return deposits
+            else:
+                logger.info(f"No deposits found for {currency}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error fetching deposits: {e}")
+            return None
+    
+    def fetch_withdrawals(self, currency='USDT', limit=20):
+        """
+        Fetch recent withdrawals for a currency
+        
+        Args:
+            currency: Currency code (default: USDT)
+            limit: Maximum number of withdrawals to fetch
+            
+        Returns:
+            List of withdrawal transactions or None if failed
+        """
+        try:
+            currency = currency.upper()
+            logger.info(f"Fetching recent {currency} withdrawals")
+            
+            # Check if exchange supports withdrawal fetching
+            if not hasattr(self.exchange, 'has') or not self.exchange.has.get('fetchWithdrawals'):
+                logger.warning(f"{self.exchange_id} does not support fetching withdrawals via API")
+                return None
+            
+            # Fetch withdrawals
+            params = {}
+            
+            # Exchange-specific parameters
+            if self.exchange_id == 'kucoin':
+                params['type'] = 'trade'  # Specify Trading Account
+            elif self.exchange_id == 'bybit':
+                params['accountType'] = 'UNIFIED'  # Specify Unified Trading Account
+            
+            withdrawals = self.exchange.fetch_withdrawals(currency, None, limit, params)
+            
+            if withdrawals:
+                logger.info(f"Found {len(withdrawals)} withdrawals for {currency}")
+                return withdrawals
+            else:
+                logger.info(f"No withdrawals found for {currency}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error fetching withdrawals: {e}")
+            return None
+    
+    def get_transaction_status(self, transaction_id, transaction_type='withdrawal', currency='USDT'):
+        """
+        Get the status of a deposit or withdrawal transaction
+        
+        Args:
+            transaction_id: ID of the transaction to check
+            transaction_type: Type of transaction ('withdrawal' or 'deposit')
+            currency: Currency code (default: USDT)
+            
+        Returns:
+            Transaction info or None if not found
+        """
+        try:
+            if transaction_type.lower() == 'withdrawal':
+                transactions = self.fetch_withdrawals(currency)
+            else:
+                transactions = self.fetch_deposits(currency)
+                
+            if not transactions:
+                return None
+                
+            # Look for transaction by ID
+            for transaction in transactions:
+                if transaction['id'] == transaction_id:
+                    return transaction
+            
+            logger.warning(f"Transaction {transaction_id} not found")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting transaction status: {e}")
+            return None
