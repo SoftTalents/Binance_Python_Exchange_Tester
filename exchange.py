@@ -343,6 +343,9 @@ class ExchangeHandler:
                 network_param = 'BSC'
             elif self.exchange_id in ['gateio', 'htx', 'bybit']:
                 network_param = 'BEP20' # HTX uses uppercase 'BSC'
+
+            if self.exchange_id == 'bitmart':
+                currency = 'USDT-BSC'
             
             # Try to fetch existing address
             try:
