@@ -413,7 +413,7 @@ class ExchangeHandler:
             
             # Validate amount
             if amount <= 0:
-                logger.error("Invalid withdrawal amount: {amount}")
+                logger.error(f"Invalid withdrawal amount: {amount}")
                 return None
                 
             # Validate address
@@ -429,44 +429,31 @@ class ExchangeHandler:
                 
             logger.info(f"Withdrawing {amount} USDT to {address} via BEP20")
             
-            # Exchange-specific network parameter handling
-            network_param = 'BEP20'
-            params = {}
-            
-            # Configure withdrawal parameters based on exchange
-            if self.exchange_id == 'mexc':
+            # Exchange-specific network parameter handling - match deposit address handling
+            if self.exchange_id in ['mexc', 'kucoin']:
                 network_param = 'BSC'
-                params = {'network': network_param}
-                
-            elif self.exchange_id == 'kucoin':
-                network_param = 'BSC'
-                params = {
-                    'network': network_param,
-                    'type': 'trade'  # Specify withdrawal from Trading Account
-                }
-                
-            elif self.exchange_id == 'htx':
-                network_param = 'BSC'
-                params = {'chain': network_param}
-                
-            elif self.exchange_id == 'gateio':
-                network_param = 'BSC'
-                params = {'network': network_param}
-                
-            elif self.exchange_id == 'bitmart':
-                network_param = 'BSC'
-                params = {'network': network_param}
-                
+            elif self.exchange_id in ['gateio', 'htx', 'bybit', 'bitmart']:
+                network_param = 'BEP20'
             elif self.exchange_id == 'bitget':
                 network_param = 'bsc'
-                params = {'chain': network_param, 'networkName': network_param}
+            else:
+                network_param = 'BEP20'
+            
+            # Configure parameters using the same approach as get_deposit_address
+            params = {'network': network_param}
+            
+            # For exchanges that use 'chain' instead of 'network'
+            if self.exchange_id == 'bitget':
+                params = {'chain': network_param, 'coin': currency}
                 
+            # Special handling for specific exchanges
+            if self.exchange_id == 'kucoin':
+                params['type'] = 'trade'  # KuCoin needs to specify the account type
             elif self.exchange_id == 'bybit':
-                network_param = 'BSC (BEP20)'
-                params = {
-                    'network': network_param,
-                    'accountType': 'UNIFIED'  # Specify withdrawal from Unified Trading Account
-                }
+                params['accountType'] = 'UNIFIED'  # Bybit uses accountType parameter
+            
+            # Debug log the parameters
+            logger.info(f"Using withdrawal parameters: {params}")
             
             # Execute withdrawal
             withdrawal = self.exchange.withdraw(currency, amount, address, tag, params)
