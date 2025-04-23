@@ -333,13 +333,8 @@ class ExchangeHandler:
             
             logger.info(f"Getting BEP20 deposit address for USDT on {self.exchange_id}")
             
-            # Normalize network parameter for different exchanges
-            network_param = 'BEP20'
-            
             # Exchange-specific network parameter handling
-            if self.exchange_id == 'kucoin':
-                network_param = 'BSC' # KuCoin uses 'BSC' rather than 'BEP20 (BSC)'
-            elif self.exchange_id in ['mexc', 'bitget']:
+            if self.exchange_id in ['mexc', 'bitget', 'kucoin']:
                 network_param = 'BSC'
             elif self.exchange_id in ['gateio', 'htx', 'bybit', 'bitmart']:
                 network_param = 'BEP20' # HTX uses uppercase 'BSC'
