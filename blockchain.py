@@ -170,11 +170,11 @@ class BlockchainHandler:
             })
             
             # Sign transaction
-            signed_txn = self.w3.eth.account.sign_transaction(transaction, private_key)
+            signed_txn = Account.sign_transaction(transaction, private_key)
             
             # Send transaction
             logger.info("Sending transaction...")
-            tx_hash = self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            tx_hash = self.w3.eth.send_raw_transaction(signed_txn.raw_transaction)
             tx_hash_hex = self.w3.to_hex(tx_hash)
             logger.info(f"Transaction sent: {tx_hash_hex}")
             
