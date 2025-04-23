@@ -316,39 +316,35 @@ class ExchangeHandler:
     
     def get_deposit_address(self, currency='USDT', network='BEP20', create_if_needed=True):
         """
-        Get deposit address for a currency with specified network
+        Get BEP20 deposit address for USDT
         
         Args:
-            currency: Currency code (default: USDT)
-            network: Network/chain to use (default: BEP20)
+            currency: Currency code (always USDT)
+            network: Network/chain to use (always BEP20)
             create_if_needed: Create a new address if none exists
             
         Returns:
             Dictionary with address info or None if failed
         """
         try:
-            currency = currency.upper()
-            logger.info(f"Getting {network} deposit address for {currency} on {self.exchange_id}")
+            # Force USDT and BEP20
+            currency = 'USDT'
+            network = 'BEP20'
+            
+            logger.info(f"Getting BEP20 deposit address for USDT on {self.exchange_id}")
             
             # Normalize network parameter for different exchanges
-            network_param = network
+            network_param = 'BEP20'
             
             # Exchange-specific network parameter handling
-            if network.upper() == 'BEP20':
-                if self.exchange_id == 'kucoin':
-                    network_param = 'BEP20 (BSC)'
-                elif self.exchange_id == 'gateio':
-                    network_param = 'BSC'
-                elif self.exchange_id == 'bitmart':
-                    network_param = 'BSC'
-                elif self.exchange_id == 'bybit':
-                    network_param = 'BSC (BEP20)'
-                elif self.exchange_id == 'htx':
-                    network_param = 'bsc'
-                elif self.exchange_id == 'mexc':
-                    network_param = 'BSC'
-                elif self.exchange_id == 'bitget':
-                    network_param = 'bsc'
+            if self.exchange_id == 'kucoin':
+                network_param = 'BEP20 (BSC)'
+            elif self.exchange_id in ['gateio', 'bitmart', 'mexc']:
+                network_param = 'BSC'
+            elif self.exchange_id == 'bybit':
+                network_param = 'BSC (BEP20)'
+            elif self.exchange_id in ['htx', 'bitget']:
+                network_param = 'bsc'
             
             # Try to fetch existing address
             try:
@@ -405,24 +401,26 @@ class ExchangeHandler:
     
     def withdraw(self, currency='USDT', amount=0, address='', tag=None, network='BEP20'):
         """
-        Withdraw funds to an external address
+        Withdraw BEP20 USDT to an external address
         
         Args:
-            currency: Currency code (default: USDT)
+            currency: Currency code (always USDT)
             amount: Amount to withdraw
             address: Destination address
             tag: Tag/memo for the transaction (if needed)
-            network: Network/chain to use (default: BEP20)
+            network: Network/chain to use (always BEP20)
             
         Returns:
             Dictionary with withdrawal info or None if failed
         """
         try:
-            currency = currency.upper()
+            # Force USDT and BEP20
+            currency = 'USDT'
+            network = 'BEP20'
             
             # Validate amount
             if amount <= 0:
-                logger.error(f"Invalid withdrawal amount: {amount}")
+                logger.error("Invalid withdrawal amount: {amount}")
                 return None
                 
             # Validate address
@@ -433,52 +431,45 @@ class ExchangeHandler:
             # Check available balance
             free_balance, _ = self.get_balance(currency)
             if free_balance < amount:
-                logger.error(f"Insufficient balance: {free_balance} {currency}, need {amount}")
+                logger.error(f"Insufficient balance: {free_balance} USDT, need {amount}")
                 return None
                 
-            logger.info(f"Withdrawing {amount} {currency} to {address} via {network}")
+            logger.info(f"Withdrawing {amount} USDT to {address} via BEP20")
             
             # Exchange-specific network parameter handling
-            network_param = network
+            network_param = 'BEP20'
             params = {}
             
             # Configure withdrawal parameters based on exchange
             if self.exchange_id == 'mexc':
-                if network.upper() == 'BEP20':
-                    network_param = 'BSC'
+                network_param = 'BSC'
                 params = {'network': network_param}
                 
             elif self.exchange_id == 'kucoin':
-                if network.upper() == 'BEP20':
-                    network_param = 'BEP20 (BSC)'
+                network_param = 'BEP20 (BSC)'
                 params = {
                     'network': network_param,
                     'type': 'trade'  # Specify withdrawal from Trading Account
                 }
                 
             elif self.exchange_id == 'htx':
-                if network.upper() == 'BEP20':
-                    network_param = 'bsc'
+                network_param = 'bsc'
                 params = {'chain': network_param}
                 
             elif self.exchange_id == 'gateio':
-                if network.upper() == 'BEP20':
-                    network_param = 'BSC'
+                network_param = 'BSC'
                 params = {'network': network_param}
                 
             elif self.exchange_id == 'bitmart':
-                if network.upper() == 'BEP20':
-                    network_param = 'BSC'
+                network_param = 'BSC'
                 params = {'network': network_param}
                 
             elif self.exchange_id == 'bitget':
-                if network.upper() == 'BEP20':
-                    network_param = 'bsc'
+                network_param = 'bsc'
                 params = {'chain': network_param, 'networkName': network_param}
                 
             elif self.exchange_id == 'bybit':
-                if network.upper() == 'BEP20':
-                    network_param = 'BSC (BEP20)'
+                network_param = 'BSC (BEP20)'
                 params = {
                     'network': network_param,
                     'accountType': 'UNIFIED'  # Specify withdrawal from Unified Trading Account
@@ -496,18 +487,19 @@ class ExchangeHandler:
     
     def fetch_deposits(self, currency='USDT', limit=20):
         """
-        Fetch recent deposits for a currency
+        Fetch recent USDT deposits
         
         Args:
-            currency: Currency code (default: USDT)
+            currency: Currency code (always USDT)
             limit: Maximum number of deposits to fetch
             
         Returns:
             List of deposit transactions or None if failed
         """
         try:
-            currency = currency.upper()
-            logger.info(f"Fetching recent {currency} deposits")
+            # Force USDT
+            currency = 'USDT'
+            logger.info("Fetching recent USDT deposits")
             
             # Check if exchange supports deposit fetching
             if not hasattr(self.exchange, 'has') or not self.exchange.has.get('fetchDeposits'):
@@ -538,18 +530,19 @@ class ExchangeHandler:
     
     def fetch_withdrawals(self, currency='USDT', limit=20):
         """
-        Fetch recent withdrawals for a currency
+        Fetch recent USDT withdrawals
         
         Args:
-            currency: Currency code (default: USDT)
+            currency: Currency code (always USDT)
             limit: Maximum number of withdrawals to fetch
             
         Returns:
             List of withdrawal transactions or None if failed
         """
         try:
-            currency = currency.upper()
-            logger.info(f"Fetching recent {currency} withdrawals")
+            # Force USDT
+            currency = 'USDT'
+            logger.info("Fetching recent USDT withdrawals")
             
             # Check if exchange supports withdrawal fetching
             if not hasattr(self.exchange, 'has') or not self.exchange.has.get('fetchWithdrawals'):
@@ -580,17 +573,19 @@ class ExchangeHandler:
     
     def get_transaction_status(self, transaction_id, transaction_type='withdrawal', currency='USDT'):
         """
-        Get the status of a deposit or withdrawal transaction
+        Get the status of a USDT deposit or withdrawal transaction
         
         Args:
             transaction_id: ID of the transaction to check
             transaction_type: Type of transaction ('withdrawal' or 'deposit')
-            currency: Currency code (default: USDT)
+            currency: Currency code (always USDT)
             
         Returns:
             Transaction info or None if not found
         """
         try:
+            # Force USDT
+            currency = 'USDT'
             if transaction_type.lower() == 'withdrawal':
                 transactions = self.fetch_withdrawals(currency)
             else:

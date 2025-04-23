@@ -240,27 +240,12 @@ def perform_operation():
                 print("\nNo balances found or error retrieving balances.")
                 
         elif action == 'deposit':
-            # Get and display deposit address for USDT on BEP20 network
-            
-            # Ask if user wants to use a different currency (default is USDT)
-            use_different_currency = input("\nDo you want to get a deposit address for a currency other than USDT? (y/n): ").strip().lower()
-            
-            if use_different_currency in ['y', 'yes']:
-                currency = input("Enter currency code: ").strip().upper()
-            else:
-                currency = 'USDT'
-            
-            # Ask if user wants to use a different network (default is BEP20)
-            use_different_network = input(f"\nDo you want to use a network other than BEP20 for {currency}? (y/n): ").strip().lower()
-            
-            if use_different_network in ['y', 'yes']:
-                print("\nCommon networks: BEP20, ERC20, TRC20, etc.")
-                network = input("Enter network/chain: ").strip()
-            else:
-                network = 'BEP20'
+            # Get and display deposit address for USDT on BEP20 network only
+            currency = 'USDT'
+            network = 'BEP20'
             
             # Get deposit address
-            print(f"\nGetting {network} deposit address for {currency}...")
+            print(f"\nGetting BEP20 deposit address for USDT...")
             address_info = exchange_handler.get_deposit_address(currency, network)
             
             if address_info and 'address' in address_info:
@@ -280,40 +265,34 @@ def perform_operation():
         
         elif action == 'withdraw':
             # Withdraw USDT via BEP20 network to an external address
-            
-            # Ask if user wants to withdraw a different currency (default is USDT)
-            use_different_currency = input("\nDo you want to withdraw a currency other than USDT? (y/n): ").strip().lower()
-            
-            if use_different_currency in ['y', 'yes']:
-                currency = input("Enter currency code: ").strip().upper()
-            else:
-                currency = 'USDT'
+            currency = 'USDT'
+            network = 'BEP20'
             
             # Check available balance
             free_balance, total_balance = exchange_handler.get_balance(currency)
             if free_balance <= 0:
-                print(f"You don't have any {currency} to withdraw.")
+                print(f"You don't have any USDT to withdraw.")
                 return
             
-            print(f"\nAvailable balance: {free_balance} {currency}")
+            print(f"\nAvailable balance: {free_balance} USDT")
             
             # Get withdrawal amount
             while True:
                 try:
-                    amount_input = input(f"Enter amount to withdraw (max {free_balance} {currency}): ").strip()
+                    amount_input = input(f"Enter amount to withdraw (max {free_balance} USDT): ").strip()
                     amount = float(amount_input)
                     if amount <= 0:
                         print("Amount must be greater than zero.")
                         continue
                     if amount > free_balance:
-                        print(f"Amount exceeds available balance of {free_balance} {currency}.")
+                        print(f"Amount exceeds available balance of {free_balance} USDT.")
                         continue
                     break
                 except ValueError:
                     print("Please enter a valid number.")
             
             # Get destination address
-            address = input(f"Enter destination address for {currency}: ").strip()
+            address = input("Enter BEP20 destination address for USDT: ").strip()
             if not address:
                 print("Address cannot be empty.")
                 return
@@ -324,20 +303,11 @@ def perform_operation():
             if tag_required in ['y', 'yes']:
                 tag = input("Enter tag/memo: ").strip()
             
-            # Ask if user wants to use a different network (default is BEP20)
-            use_different_network = input(f"\nDo you want to use a network other than BEP20 for {currency}? (y/n): ").strip().lower()
-            
-            if use_different_network in ['y', 'yes']:
-                print("\nCommon networks: BEP20, ERC20, TRC20, etc.")
-                network = input("Enter network/chain: ").strip()
-            else:
-                network = 'BEP20'
-            
             # Confirm withdrawal
             print(f"\n=== Withdrawal Details ===")
-            print(f"Currency: {currency}")
+            print(f"Currency: USDT")
             print(f"Amount: {amount}")
-            print(f"Network: {network}")
+            print(f"Network: BEP20")
             print(f"Address: {address}")
             if tag:
                 print(f"Tag/Memo: {tag}")
@@ -360,18 +330,11 @@ def perform_operation():
                 print("\nWithdrawal failed. Check the logs for details.")
         
         elif action == 'deposit_history':
-            # View deposit history for a currency
-            
-            # Ask which currency to check (default is USDT)
-            use_different_currency = input("\nDo you want to check deposit history for a currency other than USDT? (y/n): ").strip().lower()
-            
-            if use_different_currency in ['y', 'yes']:
-                currency = input("Enter currency code: ").strip().upper()
-            else:
-                currency = 'USDT'
+            # View deposit history for USDT only
+            currency = 'USDT'
             
             # Get deposit history
-            print(f"\nFetching recent {currency} deposits...")
+            print("\nFetching recent USDT deposits...")
             deposits = exchange_handler.fetch_deposits(currency)
             
             if deposits:
@@ -392,18 +355,11 @@ def perform_operation():
                 print(f"\nFailed to fetch deposit history. Check the logs for details.")
         
         elif action == 'withdrawal_history':
-            # View withdrawal history for a currency
-            
-            # Ask which currency to check (default is USDT)
-            use_different_currency = input("\nDo you want to check withdrawal history for a currency other than USDT? (y/n): ").strip().lower()
-            
-            if use_different_currency in ['y', 'yes']:
-                currency = input("Enter currency code: ").strip().upper()
-            else:
-                currency = 'USDT'
+            # View withdrawal history for USDT only
+            currency = 'USDT'
             
             # Get withdrawal history
-            print(f"\nFetching recent {currency} withdrawals...")
+            print("\nFetching recent USDT withdrawals...")
             withdrawals = exchange_handler.fetch_withdrawals(currency)
             
             if withdrawals:
