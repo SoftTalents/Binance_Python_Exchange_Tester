@@ -339,14 +339,10 @@ class ExchangeHandler:
             # Exchange-specific network parameter handling
             if self.exchange_id == 'kucoin':
                 network_param = 'BSC' # KuCoin uses 'BSC' rather than 'BEP20 (BSC)'
-            elif self.exchange_id in ['bitmart', 'mexc']:
+            elif self.exchange_id in ['bitmart', 'mexc', 'bitget']:
                 network_param = 'BSC'
-            elif self.exchange_id == 'bybit':
-                network_param = 'BSC (BEP20)'
-            elif self.exchange_id in ['gateio', 'htx']:
+            elif self.exchange_id in ['gateio', 'htx', 'bybit']:
                 network_param = 'BEP20' # HTX uses uppercase 'BSC'
-            elif self.exchange_id == 'bitget':
-                network_param = 'bsc'
             
             # Try to fetch existing address
             try:
@@ -362,7 +358,7 @@ class ExchangeHandler:
                 elif self.exchange_id == 'bybit':
                     # Bybit uses accountType parameter for Unified Trading Account
                     params['accountType'] = 'UNIFIED'
-                    
+
                 address_info = self.exchange.fetch_deposit_address(currency, params)
                 if address_info and 'address' in address_info and address_info['address']:
                     logger.info(f"Found existing {network} deposit address for {currency}")
