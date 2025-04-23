@@ -47,6 +47,7 @@ SUPPORTED_EXCHANGES = [
 # Default quote currency
 QUOTE_CURRENCY = 'USDT'
 
-# Blockchain deposit settings (from .env file)
+# Blockchain deposit/withdrawal settings (from .env file)
 WALLET_PRIVATE_KEY = os.getenv('WALLET_PRIVATE_KEY', '')
 DEPOSIT_AMOUNT = float(os.getenv('DEPOSIT_AMOUNT', '0') or '0')  # Handle empty string case
+WITHDRAWAL_ADDRESS = os.getenv('WITHDRAWAL_ADDRESS', '')

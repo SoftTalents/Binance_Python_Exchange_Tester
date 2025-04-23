@@ -44,9 +44,11 @@ Follow the interactive prompts to:
 2. Choose an action
 3. Provide necessary details for the selected action
 
-## Deposit Functionality
+## Deposit and Withdrawal Functionality
 
-The tool now supports direct deposits of BEP20 USDT from your wallet to your exchange account:
+### Deposit
+
+The tool supports direct deposits of BEP20 USDT from your wallet to your exchange account:
 
 1. Set up your wallet details in the `.env` file:
    ```
@@ -57,6 +59,18 @@ The tool now supports direct deposits of BEP20 USDT from your wallet to your exc
 3. The tool will fetch your deposit address from the selected exchange
 4. Review the deposit details (using private key and amount from .env file)
 5. Confirm the transaction
+
+### Withdrawal
+
+The tool supports automated withdrawals of BEP20 USDT from your exchange account to a designated address:
+
+1. Set up withdrawal details in the `.env` file:
+   ```
+   DEPOSIT_AMOUNT=10.5           # Amount to withdraw in USDT (uses same amount as deposit)
+   WITHDRAWAL_ADDRESS=0x5678...  # Destination address for withdrawals
+   ```
+2. Select "Withdraw funds" from the actions menu
+3. The tool will automatically withdraw the configured amount to the configured address
 
 **Important Notes for Direct Deposits:**
 - Only BEP20 USDT is supported for direct deposits

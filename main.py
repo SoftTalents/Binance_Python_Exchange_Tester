@@ -268,7 +268,7 @@ def perform_operation():
                 print(f"\nFailed to get deposit address. Check the logs for details.")
         
         elif action == 'withdraw':
-            # Withdraw USDT via BEP20 network to an external address
+            # Withdraw USDT via BEP20 network to an external address specified in .env
             currency = 'USDT'
             network = 'BEP20'
             
@@ -278,48 +278,27 @@ def perform_operation():
                 print(f"You don't have any USDT to withdraw.")
                 return
             
-            print(f"\nAvailable balance: {free_balance} USDT")
+            # Get withdrawal amount from config
+            amount = config.DEPOSIT_AMOUNT  # Using the same amount as deposit
             
-            # Get withdrawal amount
-            while True:
-                try:
-                    amount_input = input(f"Enter amount to withdraw (max {free_balance} USDT): ").strip()
-                    amount = float(amount_input)
-                    if amount <= 0:
-                        print("Amount must be greater than zero.")
-                        continue
-                    if amount > free_balance:
-                        print(f"Amount exceeds available balance of {free_balance} USDT.")
-                        continue
-                    break
-                except ValueError:
-                    print("Please enter a valid number.")
-            
-            # Get destination address
-            address = input("Enter BEP20 destination address for USDT: ").strip()
-            if not address:
-                print("Address cannot be empty.")
+            if amount <= 0:
+                print("\nInvalid withdrawal amount in .env file. Amount must be greater than zero.")
                 return
-            
-            # Ask if a tag/memo is required
-            tag_required = input("Does this withdrawal require a tag/memo? (y/n): ").strip().lower()
-            tag = None
-            if tag_required in ['y', 'yes']:
-                tag = input("Enter tag/memo: ").strip()
-            
-            # Confirm withdrawal
-            print(f"\n=== Withdrawal Details ===")
-            print(f"Currency: USDT")
-            print(f"Amount: {amount}")
-            print(f"Network: BEP20")
-            print(f"Address: {address}")
-            if tag:
-                print(f"Tag/Memo: {tag}")
                 
-            confirm = input("\nConfirm withdrawal? (y/n): ").strip().lower()
-            if confirm not in ['y', 'yes']:
-                print("Withdrawal cancelled.")
+            if amount > free_balance:
+                print(f"\nWithdrawal amount in .env file ({amount} USDT) exceeds available balance ({free_balance} USDT).")
                 return
+            
+            # Get destination address from config
+            address = config.WITHDRAWAL_ADDRESS
+            
+            if not address:
+                print("\nNo withdrawal address found in .env file.")
+                print("Please add your WITHDRAWAL_ADDRESS to the .env file and try again.")
+                return
+            
+            # No tag/memo for now - if needed, could add to .env
+            tag = None
             
             # Execute withdrawal
             print(f"\nInitiating withdrawal of {amount} {currency} to {address} via {network}...")
