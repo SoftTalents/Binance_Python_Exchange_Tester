@@ -8,6 +8,7 @@ when using BitMart withdrawals in the exchange.py module.
 
 import ccxt
 from loguru import logger
+import config
 from exchange import ExchangeHandler
 import traceback
 
@@ -68,7 +69,7 @@ def test_bitmart_withdraw():
         print(f"USDT Balance - Free: {free_balance}, Total: {total_balance}")
         
         # Set test parameters (we expect this to fail for validation reasons, but not for the NoneType error)
-        test_address = "0xD8dA6BF26964aF9D7eEd9e03E53415D37aA96045"  # Vitalik's address (not verified in BitMart)
+        test_address = config.WITHDRAWAL_ADDRESS  # Vitalik's address (not verified in BitMart)
         test_amount = 5.0
         
         # Attempt withdrawal

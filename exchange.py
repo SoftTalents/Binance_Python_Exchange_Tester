@@ -540,37 +540,10 @@ class ExchangeHandler:
             # Debug log the parameters
             logger.info(f"Using withdrawal parameters: {params}")
             
-            # Special handling for BitMart to ensure proper currency ID formatting
-            if self.exchange_id == 'bitmart':
-                # For BitMart with BEP20, we need to ensure the proper currency ID format is used
-                # This is handled by our patch, but adding an additional safeguard
-                try:
-                    # Execute withdrawal with explicit handling for BitMart
-                    withdrawal = self.exchange.withdraw(currency, amount, address, tag, params)
-                    logger.info(f"Withdrawal initiated: {withdrawal}")
-                    return withdrawal
-                except AttributeError as e:
-                    # If we still get the NoneType error despite our patch, handle it here
-                    if "object has no attribute 'find'" in str(e):
-                        logger.error(f"BitMart currency ID format error encountered: {e}")
-                        logger.error("Attempting alternative withdrawal method...")
-                        
-                        # Try with explicit currency ID format
-                        modified_params = dict(params)
-                        # Force the currency_id to be in the correct format
-                        modified_params['currency_id'] = 'USDT-BSC_BNB'
-                        
-                        withdrawal = self.exchange.withdraw(currency, amount, address, tag, modified_params)
-                        logger.info(f"Withdrawal initiated with alternative method: {withdrawal}")
-                        return withdrawal
-                    else:
-                        # Re-raise if it's a different error
-                        raise
-            else:
-                # Standard withdrawal for other exchanges
-                withdrawal = self.exchange.withdraw(currency, amount, address, tag, params)
-                logger.info(f"Withdrawal initiated: {withdrawal}")
-                return withdrawal
+            # Standard withdrawal for other exchanges
+            withdrawal = self.exchange.withdraw(currency, amount, address, tag, params)
+            logger.info(f"Withdrawal initiated: {withdrawal}")
+            return withdrawal
             
         except Exception as e:
             # Log the detailed error for debugging
