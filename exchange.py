@@ -459,12 +459,10 @@ class ExchangeHandler:
             logger.info(f"Withdrawing {amount} USDT to {address} via BEP20")
             
             # Exchange-specific network parameter handling - match deposit address handling
-            if self.exchange_id in ['mexc', 'kucoin']:
+            if self.exchange_id in ['mexc', 'kucoin', 'bitget']:
                 network_param = 'BSC'
             elif self.exchange_id in ['gateio', 'htx', 'bybit', 'bitmart']:
                 network_param = 'BEP20'
-            elif self.exchange_id == 'bitget':
-                network_param = 'bsc'
             else:
                 network_param = 'BEP20'
             
@@ -473,7 +471,11 @@ class ExchangeHandler:
             
             # For exchanges that use 'chain' instead of 'network'
             if self.exchange_id == 'bitget':
-                params = {'chain': network_param, 'coin': currency}
+                params = {
+                    'network': network_param,
+                    'chain': 'BEP20', 
+                    'coin': currency
+                }
                 
             # Special handling for specific exchanges
             if self.exchange_id == 'kucoin':
