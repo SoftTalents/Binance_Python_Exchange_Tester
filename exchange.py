@@ -2,6 +2,54 @@ import ccxt
 from loguru import logger
 import config
 
+# Fix for BitMart's get_currency_id_from_code_and_network method to resolve
+# the 'NoneType' object has no attribute 'find' error during withdrawals
+def _patch_bitmart_withdraw():
+    """
+    Apply patches to BitMart CCXT implementation to fix withdrawal issues.
+    This fixes the 'NoneType' object has no attribute 'find' error.
+    """
+    # Save original method
+    original_method = ccxt.bitmart.get_currency_id_from_code_and_network
+    
+    # Create patched method
+    def patched_get_currency_id_from_code_and_network(self, currencyCode, networkCode):
+        """
+        Fixed version of the method that handles networkCode correctly
+        and prevents the NoneType error.
+        """
+        if networkCode is None:
+            networkCode = self.default_network_code(currencyCode)
+            
+        # BitMart has special currency IDs for withdrawals with specific networks
+        if currencyCode == 'USDT':
+            if networkCode == 'BEP20':
+                return 'USDT-BSC_BNB'
+            elif networkCode == 'TRC20':
+                return 'USDT-TRX'
+            elif networkCode == 'ERC20':
+                return 'USDT-ETH'
+        
+        # Try the original method with error handling
+        try:
+            return original_method(self, currencyCode, networkCode)
+        except AttributeError as e:
+            # Handle the specific 'find' error
+            if "object has no attribute 'find'" in str(e):
+                # Fall back to a simple network addition format
+                if networkCode:
+                    return f"{currencyCode}-{networkCode}"
+                else:
+                    return currencyCode
+            # Re-raise any other AttributeErrors
+            raise
+    
+    # Apply the patch by replacing the method
+    ccxt.bitmart.get_currency_id_from_code_and_network = patched_get_currency_id_from_code_and_network
+
+# Apply patch immediately
+_patch_bitmart_withdraw()
+
 class ExchangeHandler:
     def __init__(self, exchange_id, sandbox=False):
         """Initialize exchange connection with API keys from config"""
@@ -492,11 +540,37 @@ class ExchangeHandler:
             # Debug log the parameters
             logger.info(f"Using withdrawal parameters: {params}")
             
-            # Execute withdrawal
-            withdrawal = self.exchange.withdraw(currency, amount, address, tag, params)
-            logger.info(f"Withdrawal initiated: {withdrawal}")
-            
-            return withdrawal
+            # Special handling for BitMart to ensure proper currency ID formatting
+            if self.exchange_id == 'bitmart':
+                # For BitMart with BEP20, we need to ensure the proper currency ID format is used
+                # This is handled by our patch, but adding an additional safeguard
+                try:
+                    # Execute withdrawal with explicit handling for BitMart
+                    withdrawal = self.exchange.withdraw(currency, amount, address, tag, params)
+                    logger.info(f"Withdrawal initiated: {withdrawal}")
+                    return withdrawal
+                except AttributeError as e:
+                    # If we still get the NoneType error despite our patch, handle it here
+                    if "object has no attribute 'find'" in str(e):
+                        logger.error(f"BitMart currency ID format error encountered: {e}")
+                        logger.error("Attempting alternative withdrawal method...")
+                        
+                        # Try with explicit currency ID format
+                        modified_params = dict(params)
+                        # Force the currency_id to be in the correct format
+                        modified_params['currency_id'] = 'USDT-BSC_BNB'
+                        
+                        withdrawal = self.exchange.withdraw(currency, amount, address, tag, modified_params)
+                        logger.info(f"Withdrawal initiated with alternative method: {withdrawal}")
+                        return withdrawal
+                    else:
+                        # Re-raise if it's a different error
+                        raise
+            else:
+                # Standard withdrawal for other exchanges
+                withdrawal = self.exchange.withdraw(currency, amount, address, tag, params)
+                logger.info(f"Withdrawal initiated: {withdrawal}")
+                return withdrawal
             
         except Exception as e:
             # Log the detailed error for debugging
