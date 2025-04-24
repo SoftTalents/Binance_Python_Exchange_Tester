@@ -422,10 +422,39 @@ class ExchangeHandler:
                 return None
                 
             # Check available balance
-            free_balance, _ = self.get_balance(currency)
-            if free_balance < amount:
-                logger.error(f"Insufficient balance: {free_balance} USDT, need {amount}")
-                return None
+            free_balance, total_balance = self.get_balance(currency)
+            
+            # For KuCoin, we need to specifically check the Trading Account balance
+            if self.exchange_id == 'kucoin':
+                try:
+                    # Get specific Trading Account balance
+                    balances = self.exchange.fetch_balance({'type': 'trade'})
+                    if currency in balances['free']:
+                        trade_free_balance = balances['free'][currency]
+                        trade_total_balance = balances['total'][currency]
+                        logger.info(f"KuCoin Trading Account balance - Free: {trade_free_balance}, Total: {trade_total_balance}")
+                        
+                        # Add a small buffer for withdrawal fees (0.1% buffer)
+                        required_amount = amount * 1.001
+                        logger.info(f"KuCoin withdrawal from Trading Account: required {required_amount} (with fee buffer) vs available {trade_free_balance}")
+                        
+                        if trade_free_balance < required_amount:
+                            logger.error(f"Insufficient balance in Trading Account for KuCoin withdrawal (including fee buffer): {trade_free_balance} USDT, need approximately {required_amount}")
+                            return None
+                            
+                        # Update the free_balance to use the Trading Account balance
+                        free_balance = trade_free_balance
+                    else:
+                        logger.warning(f"No {currency} balance found in KuCoin Trading Account")
+                        return None
+                except Exception as e:
+                    logger.error(f"Error fetching KuCoin Trading Account balance: {e}")
+                    return None
+            else:
+                # Standard balance check for other exchanges
+                if free_balance < amount:
+                    logger.error(f"Insufficient balance: {free_balance} USDT, need {amount}")
+                    return None
                 
             logger.info(f"Withdrawing {amount} USDT to {address} via BEP20")
             
@@ -448,7 +477,13 @@ class ExchangeHandler:
                 
             # Special handling for specific exchanges
             if self.exchange_id == 'kucoin':
-                params['type'] = 'trade'  # KuCoin needs to specify the account type
+                # KuCoin specific parameters for withdrawal from Trading Account
+                params = {
+                    'network': network_param,
+                    'withdrawalType': 'NORMAL',   # Standard withdrawal type
+                    'walletType': 'TRADE',        # Withdrawal from trading account (not MAIN)
+                    'isInnerTransfer': False      # Not an internal transfer
+                }
             elif self.exchange_id == 'bybit':
                 params['accountType'] = 'UNIFIED'  # Bybit uses accountType parameter
             
@@ -462,7 +497,34 @@ class ExchangeHandler:
             return withdrawal
             
         except Exception as e:
+            # Log the detailed error for debugging
             logger.error(f"Error withdrawing funds: {e}")
+            
+            # Check if it's a CCXT error with a specific message
+            error_message = str(e)
+            if "account.available.amount" in error_message:
+                logger.error("KuCoin error: Insufficient available amount for withdrawal (includes fee)")
+                logger.error("Make sure you have funds in your Trading Account, not just your Main/Funding Account")
+                
+            # Additional error handling based on specific exchange error codes
+            if self.exchange_id == 'kucoin' and "110003" in error_message:
+                # Try getting the withdrawal fee to provide better information
+                try:
+                    currencies = self.exchange.fetch_currencies()
+                    if currency in currencies:
+                        currency_info = currencies[currency]
+                        network_info = next((n for n in currency_info.get('networks', []) if n.get('network') == network_param), None)
+                        
+                        if network_info and 'withdrawFee' in network_info:
+                            fee = network_info['withdrawFee']
+                            logger.info(f"KuCoin withdrawal fee for {currency} on {network_param}: {fee}")
+                            logger.error(f"Ensure you have enough balance in Trading Account to cover both the withdrawal amount ({amount}) AND the fee ({fee})")
+                except Exception as fee_error:
+                    logger.error(f"Couldn't fetch fee information: {fee_error}")
+                    
+                # Suggest transferring funds from Main Account to Trading Account
+                logger.error("You might need to transfer funds from Main Account to Trading Account within KuCoin")
+            
             return None
     
     def fetch_deposits(self, currency='USDT', limit=20):

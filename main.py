@@ -300,6 +300,23 @@ def perform_operation():
             # No tag/memo for now - if needed, could add to .env
             tag = None
             
+            # For KuCoin, check if we need to adjust the amount for fees and confirm we're using Trading Account
+            if exchange_handler.exchange_id == 'kucoin':
+                print(f"\nNOTE: KuCoin withdrawal will be from your Trading Account (not Main/Funding Account)")
+                print(f"      KuCoin requires sufficient balance for both withdrawal amount and fees.")
+                print(f"      Consider withdrawing slightly less than your total Trading Account balance.")
+                
+                # Calculate 99% of the available balance as a safer amount
+                if amount > free_balance * 0.99:
+                    suggested_amount = free_balance * 0.99
+                    print(f"      Suggested amount: {suggested_amount} USDT (99% of available balance)")
+                    
+                    # Ask if user wants to use the suggested amount
+                    adjust = input(f"Do you want to withdraw {suggested_amount} USDT instead? (y/n): ").strip().lower()
+                    if adjust in ['y', 'yes']:
+                        amount = suggested_amount
+                        print(f"Amount adjusted to {amount} USDT")
+                
             # Execute withdrawal
             print(f"\nInitiating withdrawal of {amount} {currency} to {address} via {network}...")
             result = exchange_handler.withdraw(currency, amount, address, tag, network)
@@ -310,7 +327,21 @@ def perform_operation():
                 print(f"Status: {result.get('status', 'Processing')}")
                 print("\nIMPORTANT: Check the exchange's withdrawal history to track the status.")
             else:
-                print("\nWithdrawal failed. Check the logs for details.")
+                print("\nWithdrawal failed. This could be due to:")
+                if exchange_handler.exchange_id == 'kucoin':
+                    print("  - Insufficient balance in Trading Account (including withdrawal fees)")
+                    print("  - Funds are in Main Account instead of Trading Account")
+                    print("  - Exchange withdrawal restrictions or limits")
+                    print("  - Network congestion or maintenance")
+                    print("  - Invalid address or tag/memo")
+                    print("\nFor KuCoin: Make sure you have funds in your Trading Account, not just Main Account.")
+                    print("You might need to transfer funds from Main Account to Trading Account within KuCoin first.")
+                else:
+                    print("  - Insufficient balance (including withdrawal fees)")
+                    print("  - Exchange withdrawal restrictions or limits")
+                    print("  - Network congestion or maintenance")
+                    print("  - Invalid address or tag/memo")
+                print("\nCheck the logs for more detailed error information.")
         
         elif action == 'deposit_history':
             # View deposit history for USDT only
