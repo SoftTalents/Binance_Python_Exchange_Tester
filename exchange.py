@@ -591,16 +591,15 @@ class ExchangeHandler:
                 try:
                     logger.info("Bybit requires transfer from Unified Trading to Funding account before withdrawal")
                     
-                    # Transfer parameters
-                    transfer_params = {
-                        'coin': currency,
-                        'amount': str(amount),
-                        'fromAccountType': 'UNIFIED',
-                        'toAccountType': 'FUND'
-                    }
+                    # Use standard transfer method
+                    # The fromAccount should be 'unified' and toAccount should be 'fund'
+                    transfer_result = self.exchange.transfer(
+                        code=currency,
+                        amount=amount,
+                        fromAccount='unified',
+                        toAccount='fund'
+                    )
                     
-                    # Execute the transfer - Bybit has a specific endpoint for this
-                    transfer_result = self.exchange.privatePutV5AssetTransfer(transfer_params)
                     logger.info(f"Transfer from Unified Trading to Funding account result: {transfer_result}")
                     
                     # Wait for transfer to process
@@ -705,16 +704,15 @@ class ExchangeHandler:
                 try:
                     logger.info("Attempting one more time with auto-transfer from Unified to Funding account...")
                     
-                    # Transfer parameters - with a buffer for fees
-                    transfer_params = {
-                        'coin': currency,
-                        'amount': str(amount * 1.001),  # Add buffer for fees
-                        'fromAccountType': 'UNIFIED',
-                        'toAccountType': 'FUND'
-                    }
-                    
+                    # Use standard transfer method with buffer for fees
                     try:
-                        transfer_result = self.exchange.privatePutV5AssetTransfer(transfer_params)
+                        transfer_result = self.exchange.transfer(
+                            code=currency,
+                            amount=amount * 1.001,  # Add buffer for fees
+                            fromAccount='unified',
+                            toAccount='fund'
+                        )
+                        
                         logger.info(f"Transfer result: {transfer_result}")
                         
                         logger.info("Transfer initiated. Waiting 3 seconds for it to process...")
