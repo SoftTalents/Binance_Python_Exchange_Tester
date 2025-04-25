@@ -532,7 +532,8 @@ class ExchangeHandler:
                     'network': network_param,
                     'withdrawalType': 'NORMAL',   # Standard withdrawal type
                     'walletType': 'TRADE',        # Withdrawal from trading account (not MAIN)
-                    'isInnerTransfer': False      # Not an internal transfer
+                    'isInnerTransfer': False,     # Not an internal transfer
+                    'type': 'TRADE'               # Critical parameter indicating withdrawal from Trading Account
                 }
             elif self.exchange_id == 'bybit':
                 params['accountType'] = 'UNIFIED'  # Bybit uses accountType parameter
