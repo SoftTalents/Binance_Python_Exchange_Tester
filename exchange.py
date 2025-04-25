@@ -595,7 +595,7 @@ class ExchangeHandler:
                     # The fromAccount should be 'unified' and toAccount should be 'fund'
                     transfer_result = self.exchange.transfer(
                         code=currency,
-                        amount=amount,
+                        amount=amount + 1,
                         fromAccount='unified',
                         toAccount='fund'
                     )
