@@ -1,6 +1,8 @@
 import ccxt
 from loguru import logger
 import config
+import time
+import random
 
 # Fix for BitMart's get_currency_id_from_code_and_network method to resolve
 # the 'NoneType' object has no attribute 'find' error during withdrawals
@@ -513,8 +515,51 @@ class ExchangeHandler:
                 network_param = 'BEP20'
             else:
                 network_param = 'BEP20'
+                
+            # For KuCoin, we need to first transfer funds from Trading to Main account
+            # This is because KuCoin only allows withdrawals from Main account
+            if self.exchange_id == 'kucoin':
+                try:
+                    logger.info("KuCoin requires transfer from Trading to Main account before withdrawal")
+                    
+                    # Generate a client order ID
+                    client_order_id = f"transfer_{int(time.time())}_{random.randint(1000, 9999)}"
+                    
+                    # Transfer parameters
+                    transfer_params = {
+                        'clientOid': client_order_id,
+                        'currency': currency,
+                        'from': 'trade',
+                        'to': 'main',
+                        'amount': str(amount)  # Send exact amount needed
+                    }
+                    
+                    # Execute the transfer
+                    transfer_result = self.exchange.privatePostAccountsInnerTransfer(transfer_params)
+                    logger.info(f"Transfer from Trading to Main account result: {transfer_result}")
+                    
+                    # Wait for transfer to process
+                    logger.info("Waiting 3 seconds for transfer to process...")
+                    time.sleep(3)
+                    
+                    # Now withdraw from Main account (standard withdrawal)
+                    main_withdraw_params = {
+                        'network': network_param,
+                    }
+                    
+                    if tag:
+                        main_withdraw_params['memo'] = tag
+                        
+                    # Execute the withdrawal now from Main account
+                    withdrawal = self.exchange.withdraw(currency, amount, address, tag, main_withdraw_params)
+                    logger.info(f"KuCoin withdrawal initiated after transfer: {withdrawal}")
+                    return withdrawal
+                    
+                except Exception as e:
+                    logger.error(f"Error with KuCoin transfer-then-withdraw process: {e}")
+                    # Continue trying standard withdrawal as fallback
             
-            # Configure parameters using the same approach as get_deposit_address
+            # Standard withdrawal for other exchanges
             params = {'network': network_param}
             
             # For exchanges that use 'chain' instead of 'network'
@@ -526,22 +571,13 @@ class ExchangeHandler:
                 }
                 
             # Special handling for specific exchanges
-            if self.exchange_id == 'kucoin':
-                # KuCoin specific parameters for withdrawal from Trading Account
-                params = {
-                    'network': network_param,
-                    'withdrawalType': 'NORMAL',   # Standard withdrawal type
-                    'walletType': 'TRADE',        # Withdrawal from trading account (not MAIN)
-                    'isInnerTransfer': False,     # Not an internal transfer
-                    'type': 'TRADE'               # Critical parameter indicating withdrawal from Trading Account
-                }
-            elif self.exchange_id == 'bybit':
+            if self.exchange_id == 'bybit':
                 params['accountType'] = 'UNIFIED'  # Bybit uses accountType parameter
             
             # Debug log the parameters
             logger.info(f"Using withdrawal parameters: {params}")
             
-            # Standard withdrawal for other exchanges
+            # Execute withdrawal
             withdrawal = self.exchange.withdraw(currency, amount, address, tag, params)
             logger.info(f"Withdrawal initiated: {withdrawal}")
             return withdrawal
@@ -554,26 +590,46 @@ class ExchangeHandler:
             error_message = str(e)
             if "account.available.amount" in error_message:
                 logger.error("KuCoin error: Insufficient available amount for withdrawal (includes fee)")
-                logger.error("Make sure you have funds in your Trading Account, not just your Main/Funding Account")
+                logger.error("KuCoin requires funds to be in Main Account for withdrawal, not Trading Account")
                 
-            # Additional error handling based on specific exchange error codes
-            if self.exchange_id == 'kucoin' and "110003" in error_message:
-                # Try getting the withdrawal fee to provide better information
-                try:
-                    currencies = self.exchange.fetch_currencies()
-                    if currency in currencies:
-                        currency_info = currencies[currency]
-                        network_info = next((n for n in currency_info.get('networks', []) if n.get('network') == network_param), None)
+                # For KuCoin, try to transfer from Trading to Main account if needed
+                if self.exchange_id == 'kucoin':
+                    try:
+                        logger.info("Attempting one more time with auto-transfer...")
+                        # Generate a client order ID
+                        client_order_id = f"transfer_{int(time.time())}_{random.randint(1000, 9999)}"
                         
-                        if network_info and 'withdrawFee' in network_info:
-                            fee = network_info['withdrawFee']
-                            logger.info(f"KuCoin withdrawal fee for {currency} on {network_param}: {fee}")
-                            logger.error(f"Ensure you have enough balance in Trading Account to cover both the withdrawal amount ({amount}) AND the fee ({fee})")
-                except Exception as fee_error:
-                    logger.error(f"Couldn't fetch fee information: {fee_error}")
-                    
-                # Suggest transferring funds from Main Account to Trading Account
-                logger.error("You might need to transfer funds from Main Account to Trading Account within KuCoin")
+                        # Transfer parameters - with a buffer for fees
+                        transfer_params = {
+                            'clientOid': client_order_id,
+                            'currency': currency,
+                            'from': 'trade',
+                            'to': 'main',
+                            'amount': str(amount * 1.001)  # Add buffer for fees
+                        }
+                        
+                        try:
+                            transfer_result = self.exchange.privatePostAccountsInnerTransfer(transfer_params)
+                            logger.info(f"Transfer result: {transfer_result}")
+                            
+                            logger.info("Transfer initiated. Waiting 3 seconds for it to process...")
+                            time.sleep(3)  # Wait for transfer to process
+                            
+                            # Try withdrawal again
+                            logger.info("Attempting withdrawal again after transfer...")
+                            try:
+                                main_params = {'network': network_param}
+                                if tag:
+                                    main_params['memo'] = tag
+                                withdrawal = self.exchange.withdraw(currency, amount, address, tag, main_params)
+                                logger.info(f"Withdrawal initiated after transfer: {withdrawal}")
+                                return withdrawal
+                            except Exception as retry_err:
+                                logger.error(f"Withdrawal after transfer failed: {retry_err}")
+                        except Exception as transfer_err:
+                            logger.error(f"Error transferring funds: {transfer_err}")
+                    except Exception as main_err:
+                        logger.error(f"Error in final withdrawal attempt: {main_err}")
             
             return None
     
