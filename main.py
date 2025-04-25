@@ -316,6 +316,23 @@ def perform_operation():
                     if adjust in ['y', 'yes']:
                         amount = suggested_amount
                         print(f"Amount adjusted to {amount} USDT")
+            
+            # For Bybit, inform about the account transfer process
+            elif exchange_handler.exchange_id == 'bybit':
+                print(f"\nNOTE: Bybit withdrawal will be from your Funding Account (not Unified Trading Account)")
+                print(f"      The system will attempt to automatically transfer funds from Unified Trading to Funding Account.")
+                print(f"      Consider withdrawing slightly less than your total available balance.")
+                
+                # Calculate 99% of the available balance as a safer amount
+                if amount > free_balance * 0.99:
+                    suggested_amount = free_balance * 0.99
+                    print(f"      Suggested amount: {suggested_amount} USDT (99% of available balance)")
+                    
+                    # Ask if user wants to use the suggested amount
+                    adjust = input(f"Do you want to withdraw {suggested_amount} USDT instead? (y/n): ").strip().lower()
+                    if adjust in ['y', 'yes']:
+                        amount = suggested_amount
+                        print(f"Amount adjusted to {amount} USDT")
                 
             # Execute withdrawal
             print(f"\nInitiating withdrawal of {amount} {currency} to {address} via {network}...")
@@ -336,6 +353,14 @@ def perform_operation():
                     print("  - Invalid address or tag/memo")
                     print("\nFor KuCoin: Make sure you have funds in your Trading Account, not just Main Account.")
                     print("You might need to transfer funds from Main Account to Trading Account within KuCoin first.")
+                elif exchange_handler.exchange_id == 'bybit':
+                    print("  - Insufficient balance in Funding Account (including withdrawal fees)")
+                    print("  - Funds are in Unified Trading Account instead of Funding Account")
+                    print("  - Exchange withdrawal restrictions or limits")
+                    print("  - Network congestion or maintenance")
+                    print("  - Invalid address or tag/memo")
+                    print("\nFor Bybit: Make sure you have funds in your Funding Account, not just Unified Trading Account.")
+                    print("The system will attempt to automatically transfer funds from Unified Trading to Funding Account.")
                 else:
                     print("  - Insufficient balance (including withdrawal fees)")
                     print("  - Exchange withdrawal restrictions or limits")

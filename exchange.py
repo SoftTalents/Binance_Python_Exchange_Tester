@@ -500,6 +500,32 @@ class ExchangeHandler:
                 except Exception as e:
                     logger.error(f"Error fetching KuCoin Trading Account balance: {e}")
                     return None
+            # For Bybit, similarly check Unified Account balance
+            elif self.exchange_id == 'bybit':
+                try:
+                    # Get specific Unified Account balance
+                    balances = self.exchange.fetch_balance({'accountType': 'UNIFIED'})
+                    if currency in balances['free']:
+                        unified_free_balance = balances['free'][currency]
+                        unified_total_balance = balances['total'][currency]
+                        logger.info(f"Bybit Unified Account balance - Free: {unified_free_balance}, Total: {unified_total_balance}")
+                        
+                        # Add a small buffer for withdrawal fees (0.1% buffer)
+                        required_amount = amount * 1.001
+                        logger.info(f"Bybit withdrawal from Unified Account: required {required_amount} (with fee buffer) vs available {unified_free_balance}")
+                        
+                        if unified_free_balance < required_amount:
+                            logger.error(f"Insufficient balance in Unified Account for Bybit withdrawal (including fee buffer): {unified_free_balance} USDT, need approximately {required_amount}")
+                            return None
+                            
+                        # Update the free_balance to use the Unified Account balance
+                        free_balance = unified_free_balance
+                    else:
+                        logger.warning(f"No {currency} balance found in Bybit Unified Account")
+                        return None
+                except Exception as e:
+                    logger.error(f"Error fetching Bybit Unified Account balance: {e}")
+                    return None
             else:
                 # Standard balance check for other exchanges
                 if free_balance < amount:
@@ -559,6 +585,47 @@ class ExchangeHandler:
                     logger.error(f"Error with KuCoin transfer-then-withdraw process: {e}")
                     # Continue trying standard withdrawal as fallback
             
+            # For Bybit, we need to first transfer funds from Unified Trading to Funding account
+            # This is because Bybit only allows withdrawals from Funding account
+            elif self.exchange_id == 'bybit':
+                try:
+                    logger.info("Bybit requires transfer from Unified Trading to Funding account before withdrawal")
+                    
+                    # Transfer parameters
+                    transfer_params = {
+                        'coin': currency,
+                        'amount': str(amount),
+                        'fromAccountType': 'UNIFIED',
+                        'toAccountType': 'FUND'
+                    }
+                    
+                    # Execute the transfer - Bybit has a specific endpoint for this
+                    transfer_result = self.exchange.privatePutV5AssetTransfer(transfer_params)
+                    logger.info(f"Transfer from Unified Trading to Funding account result: {transfer_result}")
+                    
+                    # Wait for transfer to process
+                    logger.info("Waiting 3 seconds for transfer to process...")
+                    time.sleep(3)
+                    
+                    # Now withdraw from Funding account
+                    fund_withdraw_params = {
+                        'network': network_param,
+                        'accountType': 'FUND'  # Specify Funding account for withdrawal
+                    }
+                    
+                    if tag:
+                        fund_withdraw_params['memo'] = tag
+                        
+                    # Execute the withdrawal from Funding account
+                    withdrawal = self.exchange.withdraw(currency, amount, address, tag, fund_withdraw_params)
+                    logger.info(f"Bybit withdrawal initiated after transfer: {withdrawal}")
+                    return withdrawal
+                    
+                except Exception as e:
+                    logger.error(f"Error with Bybit transfer-then-withdraw process: {e}")
+                    logger.error(f"Detailed error: {str(e)}")
+                    # Continue trying standard withdrawal as fallback, though likely to fail
+            
             # Standard withdrawal for other exchanges
             params = {'network': network_param}
             
@@ -572,7 +639,8 @@ class ExchangeHandler:
                 
             # Special handling for specific exchanges
             if self.exchange_id == 'bybit':
-                params['accountType'] = 'UNIFIED'  # Bybit uses accountType parameter
+                # For standard withdrawal attempt (fallback), try with Funding account
+                params['accountType'] = 'FUND'  # Change to FUND from UNIFIED
             
             # Debug log the parameters
             logger.info(f"Using withdrawal parameters: {params}")
@@ -630,6 +698,47 @@ class ExchangeHandler:
                             logger.error(f"Error transferring funds: {transfer_err}")
                     except Exception as main_err:
                         logger.error(f"Error in final withdrawal attempt: {main_err}")
+            
+            # Handle Bybit-specific errors in case a funds transfer is needed
+            elif self.exchange_id == 'bybit' and ('transfer from Unified' in error_message or 'insufficient' in error_message.lower()):
+                logger.error("Bybit error: Funds might be in Unified Trading Account but withdrawal requires Funding Account")
+                try:
+                    logger.info("Attempting one more time with auto-transfer from Unified to Funding account...")
+                    
+                    # Transfer parameters - with a buffer for fees
+                    transfer_params = {
+                        'coin': currency,
+                        'amount': str(amount * 1.001),  # Add buffer for fees
+                        'fromAccountType': 'UNIFIED',
+                        'toAccountType': 'FUND'
+                    }
+                    
+                    try:
+                        transfer_result = self.exchange.privatePutV5AssetTransfer(transfer_params)
+                        logger.info(f"Transfer result: {transfer_result}")
+                        
+                        logger.info("Transfer initiated. Waiting 3 seconds for it to process...")
+                        time.sleep(3)  # Wait for transfer to process
+                        
+                        # Try withdrawal again from Funding account
+                        logger.info("Attempting withdrawal again after transfer...")
+                        try:
+                            fund_params = {
+                                'network': network_param,
+                                'accountType': 'FUND'  # Specify Funding account
+                            }
+                            if tag:
+                                fund_params['memo'] = tag
+                                
+                            withdrawal = self.exchange.withdraw(currency, amount, address, tag, fund_params)
+                            logger.info(f"Withdrawal initiated after transfer: {withdrawal}")
+                            return withdrawal
+                        except Exception as retry_err:
+                            logger.error(f"Withdrawal after transfer failed: {retry_err}")
+                    except Exception as transfer_err:
+                        logger.error(f"Error transferring funds: {transfer_err}")
+                except Exception as main_err:
+                    logger.error(f"Error in final withdrawal attempt: {main_err}")
             
             return None
     
